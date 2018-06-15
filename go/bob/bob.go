@@ -6,30 +6,35 @@ import (
 )
 
 func Hey(remark string) string {
-	var allCaps = strings.ToUpper(remark) == remark
-	var alpha = regexp.MustCompile(`[a-zA-Z]+`).MatchString
+	r := strings.TrimSpace(remark)
 
-	remark = strings.TrimSpace(remark)
-
-	if remark == "" {
+	switch {
+	case isSilent(r):
 		return "Fine. Be that way!"
-	}
-
-	if strings.HasSuffix(remark, "?") {
-		if allCaps && alpha(remark) {
-			return "Calm down, I know what I'm doing!"
-		} else {
-			return "Sure."
-		}
-	}
-
-	if !alpha(remark) {
+	case isQuestion(r) && isYelling(r) && hasAlpha(r):
+		return "Calm down, I know what I'm doing!"
+	case isYelling(r) && hasAlpha(r):
+		return "Whoa, chill out!"
+	case isQuestion(r):
+		return "Sure."
+	default:
 		return "Whatever."
 	}
+}
 
-	if allCaps {
-		return "Whoa, chill out!"
-	}
+func isYelling(remark string) bool {
+	return strings.ToUpper(remark) == remark
+}
 
-	return "Whatever."
+func isQuestion(remark string) bool {
+	return strings.HasSuffix(remark, "?")
+}
+
+func isSilent(remark string) bool {
+	return remark == ""
+}
+
+var isAlpha = regexp.MustCompile(`[[:alpha:]]+`)
+func hasAlpha(s string) bool {
+	return isAlpha.MatchString(s)
 }
