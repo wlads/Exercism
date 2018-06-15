@@ -2,7 +2,7 @@ package space
 
 type Planet string
 
-var planet_orbit = map[Planet]float64 {
+var orbitInPlanet = map[Planet]float64 {
 	"Earth":31557600,
 	"Mercury":31557600*0.2408467,
 	"Venus":31557600*0.61519726,
@@ -14,5 +14,5 @@ var planet_orbit = map[Planet]float64 {
 }
 
 func Age(seconds float64, planet Planet) float64 {
-	return seconds/planet_orbit[planet]
+	return seconds/orbitInPlanet[planet]
 }
