@@ -16,7 +16,7 @@ func Frequency(s string) FreqMap {
 func ConcurrentFrequency(ary []string) FreqMap {
 	c := make(chan FreqMap)
 	for _, s := range ary {
-		go countFreqChan(s, c)
+		go func(text string) { c <- Frequency(text) }(s)
 	}
 	m := FreqMap{}
 	for range ary {
@@ -27,14 +27,7 @@ func ConcurrentFrequency(ary []string) FreqMap {
 	return m
 }
 
-func countFreqChan(s string, c chan FreqMap) {
-	m := FreqMap{}
-	for _, r := range s {
-		m[r]++
-	}
-	c <- m
-}
-
+// not in use
 func reduceMap(m1, m2 FreqMap) FreqMap {
 	for k1 := range m1 {
 		if _, ok := m2[k1]; ok {
@@ -43,3 +36,6 @@ func reduceMap(m1, m2 FreqMap) FreqMap {
 	}
 	return m1
 }
+
+// alternative sol sharing data structure: http://exercism.io/submissions/3cabd34a00324ba08d15a987ebc33395
+// nice solution with wait group: http://exercism.io/submissions/c859d0df79204b148245a00de7fe60ff
