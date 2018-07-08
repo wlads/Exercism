@@ -2,7 +2,7 @@ package tree
 
 import (
 	"errors"
-	"fmt"
+	"sort"
 )
 
 type Record struct {
@@ -14,94 +14,64 @@ type Node struct {
 	Children []*Node
 }
 
-type Mismatch struct{}
+type ByID []Record
 
-func (m Mismatch) Error() string {
-	return "c"
-}
+func (r ByID) Len() int           { return len(r) }
+func (r ByID) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ByID) Less(i, j int) bool { return r[i].ID < r[j].ID }
 
 func Build(records []Record) (*Node, error) {
 	if len(records) == 0 {
 		return nil, nil
 	}
-	root := &Node{}
-	todo := []*Node{root}
-	n := 1
-	for {
-		if len(todo) == 0 {
-			break
-		}
-		newTodo := []*Node(nil)
-		for _, c := range todo {
-			for _, r := range records {
-				if r.Parent == c.ID {
-					if r.ID < c.ID {
-						return nil, errors.New("a")
-					} else if r.ID == c.ID {
-						if r.ID != 0 {
-							return nil, fmt.Errorf("b")
-						}
-					} else {
-						n++
-						switch len(c.Children) {
-						case 0:
-							nn := &Node{ID: r.ID}
-							c.Children = []*Node{nn}
-							newTodo = append(newTodo, nn)
-						case 1:
-							nn := &Node{ID: r.ID}
-							if c.Children[0].ID < r.ID {
-								c.Children = []*Node{c.Children[0], nn}
-								newTodo = append(newTodo, nn)
-							} else {
-								c.Children = []*Node{nn, c.Children[0]}
-								newTodo = append(newTodo, nn)
-							}
-						default:
-							nn := &Node{ID: r.ID}
-							newTodo = append(newTodo, nn)
-						breakpoint:
-							for range []bool{false} {
-								for i, cc := range c.Children {
-									if cc.ID > r.ID {
-										a := make([]*Node, len(c.Children)+1)
-										copy(a, c.Children[:i])
-										copy(a[i+1:], c.Children[i:])
-										copy(a[i:i+1], []*Node{nn})
-										c.Children = a
-										break breakpoint
-									}
-								}
-								c.Children = append(c.Children, nn)
-							}
-						}
-					}
-				}
-			}
-		}
-		todo = newTodo
-	}
-	if n != len(records) {
-		return nil, Mismatch{}
-	}
-	if err := chk(root, len(records)); err != nil {
-		return nil, err
-	}
-	return root, nil
-}
 
-func chk(n *Node, m int) (err error) {
-	if n.ID > m {
-		return fmt.Errorf("z")
-	} else if n.ID == m {
-		return fmt.Errorf("y")
-	} else {
-		for i := 0; i < len(n.Children); i++ {
-			err = chk(n.Children[i], m)
-			if err != nil {
-				return
-			}
+	sort.Sort(ByID(records))
+
+	var root *Node
+	nodes := make(map[int]*Node)
+
+	for i, r := range records {
+		node := &Node{r.ID, nil}
+
+		if nodes[r.ID] != nil {
+			return nil, errors.New("record set contains duplicate node")
 		}
-		return
+
+		nodes[r.ID] = node
+
+		if r.ID == r.Parent {
+			if root != nil {
+				return nil, errors.New("record set contains more than one root node")
+			}
+
+			root = node
+			continue
+		}
+
+		if i != r.ID {
+			return nil, errors.New("node has a wrong ID")
+		}
+
+		if r.Parent > node.ID {
+			return nil, errors.New("parent ID is greater than nodes ID")
+		}
+
+		parent, ok := nodes[r.Parent]
+
+		if !ok {
+			return nil, errors.New("parent does not exist")
+		}
+
+		if parent.Children == nil {
+			parent.Children = make([]*Node, 0)
+		}
+
+		parent.Children = append(parent.Children, node)
 	}
+
+	if root == nil {
+		return nil, errors.New("record set contains no root node")
+	}
+
+	return root, nil
 }
