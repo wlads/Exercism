@@ -1,3 +1,5 @@
+// Package tree contains functions for building a tree from a list of abstract
+// records.
 package tree
 
 import (
@@ -5,72 +7,61 @@ import (
 	"sort"
 )
 
+// Record struct with ID and Parent
 type Record struct {
 	ID, Parent int
 }
 
+// Node struct with ID and Childrens
 type Node struct {
 	ID       int
 	Children []*Node
 }
 
-type ByID []Record
-
-func (r ByID) Len() int           { return len(r) }
-func (r ByID) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ByID) Less(i, j int) bool { return r[i].ID < r[j].ID }
-
+// Build constructs a tree from the given list of records and returns a pointer
+// to its root.
 func Build(records []Record) (*Node, error) {
 	if len(records) == 0 {
 		return nil, nil
 	}
 
-	sort.Sort(ByID(records))
+	sort.Slice(records, func(i, j int) bool {
+		return records[i].ID < records[j].ID
+	})
 
-	var root *Node
-	nodes := make(map[int]*Node)
-
-	for i, r := range records {
-		node := &Node{r.ID, nil}
-
-		if nodes[r.ID] != nil {
-			return nil, errors.New("record set contains duplicate node")
-		}
-
-		nodes[r.ID] = node
-
-		if r.ID == r.Parent {
-			if root != nil {
-				return nil, errors.New("record set contains more than one root node")
-			}
-
-			root = node
-			continue
-		}
-
-		if i != r.ID {
-			return nil, errors.New("node has a wrong ID")
-		}
-
-		if r.Parent > node.ID {
-			return nil, errors.New("parent ID is greater than nodes ID")
-		}
-
-		parent, ok := nodes[r.Parent]
-
-		if !ok {
-			return nil, errors.New("parent does not exist")
-		}
-
-		if parent.Children == nil {
-			parent.Children = make([]*Node, 0)
-		}
-
-		parent.Children = append(parent.Children, node)
+	if records[0].ID != 0 || records[0].Parent != 0 {
+		return nil, errors.New("Illegal root node")
 	}
 
-	if root == nil {
-		return nil, errors.New("record set contains no root node")
+	root := &Node{}
+	nodes := make(map[int]*Node)
+	nodes[0] = root
+
+	for i := 1; i < len(records); i++ {
+		r := records[i]
+
+		if r.ID < r.Parent {
+			return nil, errors.New("Record with ID lower than Parent")
+		}
+
+		if r.ID == r.Parent {
+			return nil, errors.New("Non-root record with self Parent")
+		}
+
+		if r.ID < 1 || r.ID >= len(records) {
+			return nil, errors.New("Illegal record ID")
+		}
+
+		if _, exists := nodes[r.ID]; exists {
+			return nil, errors.New("Duplicate record")
+		}
+
+		nn := &Node{ID: r.ID}
+		nodes[r.ID] = nn
+
+		if parent, exists := nodes[r.Parent]; exists {
+			parent.Children = append(parent.Children, nn)
+		}
 	}
 
 	return root, nil
